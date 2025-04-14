@@ -1,0 +1,254 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>車貸試算｜簡約風</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", "Helvetica Neue", sans-serif;
+      background: #f5f5f0;
+      color: #333;
+      padding: 20px;
+      margin: 0;
+    }
+    .calculator {
+      max-width: 480px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    h2 {
+      text-align: center;
+      font-weight: 500;
+      color: #444;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-top: 16px;
+      color: #555;
+      font-size: 15px;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 6px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fafafa;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .results {
+      margin-top: 24px;
+      background: #f9f9f6;
+      padding: 20px;
+      border-radius: 6px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .result-item {
+      background: #fff;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 24px;
+      width: 100%;
+      padding: 12px 0;
+      background: #a38f70;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #8f7a5d;
+    }
+
+    .tab-buttons {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .tab-buttons input[type="radio"] {
+      display: none;
+    }
+    .tab-buttons label {
+      display: inline-block;
+      padding: 8px 16px;
+      margin: 0 6px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      background-color: #fff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 14px;
+    }
+    .tab-buttons input[type="radio"]:checked + label {
+      background-color: #a38f70;
+      color: #fff;
+      border-color: #a38f70;
+    }
+  </style>
+</head>
+<body>
+  <div class="tab-buttons">
+    <input type="radio" id="tab-muji" name="tab" value="muji" checked onclick="switchTab('muji')">
+    <label for="tab-muji">一般</label>
+    <input type="radio" id="tab-tesla" name="tab" value="tesla" onclick="switchTab('tesla')">
+    <label for="tab-tesla">Tesla</label>
+  </div>
+
+  <!-- muji tab -->
+  <div id="muji" class="tab-content">
+    <div class="calculator">
+      <h2>車貸試算</h2>
+      <label>車價（元）<input type="number" id="carPrice" placeholder="例如：2037400"></label>
+      <label>貸款成數（%）<input type="number" id="loanPercent" placeholder="例如：80"></label>
+      <label>利率（年 %）<input type="number" step="0.01" id="interestRate" placeholder="例如：1.58"></label>
+      <label>期數（月）<select id="months"><option value="36">36</option><option value="48">48</option><option value="60">60</option><option value="72">72</option><option value="84">84</option></select></label>
+      <button onclick="calculateLoan()">開始試算</button>
+      <div class="results" id="result"></div>
+    </div>
+  </div>
+
+  <!-- tesla tab -->
+  <div id="tesla" class="tab-content" style="display:none;">
+    <div class="calculator">
+      <h2>Tesla車型試算</h2>
+      <label>車型<select id="model" onchange="updateTeslaOptions()">
+        <option value="">請選擇</option>
+        <option value="Model 3">Model 3</option>
+        <option value="Model Y">Model Y</option>
+        <option value="Model S">Model S</option>
+        <option value="Model X">Model X</option>
+      </select></label>
+      <label>版本<select id="variant" onchange="updateTotal()"></select></label>
+      <label>內裝<select id="interior" onchange="updateTotal()"></select></label>
+      <label>方向盤<select id="steering" onchange="updateTotal()"></select></label>
+      <label>貸款成數（%）<select id="loanPercentTesla"><option value="70">70</option><option value="80">80</option><option value="90">90</option></select></label>
+      <label>利率（年 %）<input type="number" step="0.01" id="interestRateTesla" value="1.5"></label>
+      <label>期數（月）<select id="monthsTesla"><option value="36">36</option><option value="48">48</option><option value="60">60</option><option value="72">72</option><option value="84">84</option></select></label>
+      <button onclick="calculateTeslaLoan()">試算</button>
+      <div class="results" id="resultTesla"></div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(id) {
+      document.getElementById('muji').style.display = id === 'muji' ? 'block' : 'none';
+      document.getElementById('tesla').style.display = id === 'tesla' ? 'block' : 'none';
+    }
+
+    function calculateLoan() {
+      const carPrice = parseFloat(document.getElementById("carPrice").value);
+      const loanPercent = parseFloat(document.getElementById("loanPercent").value) / 100;
+      const annualRate = parseFloat(document.getElementById("interestRate").value) / 100;
+      const months = parseInt(document.getElementById("months").value);
+      if (isNaN(carPrice) || isNaN(loanPercent) || isNaN(annualRate) || isNaN(months)) {
+        alert("請輸入所有欄位"); return;
+      }
+      const loanAmount = carPrice * loanPercent;
+      const monthlyRate = annualRate / 12;
+      const monthlyPayment = loanAmount * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
+      const downPayment = carPrice - loanAmount;
+      const totalMonthly = monthlyPayment * months;
+      const total = downPayment + totalMonthly;
+      const interest = total - carPrice;
+      document.getElementById("result").innerHTML = `
+        <div class="result-item"><strong>車價</strong><br>${Math.round(carPrice).toLocaleString()} 元</div>
+        <div class="result-item"><strong>首付</strong><br>${Math.round(downPayment).toLocaleString()} 元</div>
+        <div class="result-item"><strong>貸款本金</strong><br>${Math.round(loanAmount).toLocaleString()} 元</div>
+        <div class="result-item"><strong>總月付款</strong><br>${Math.round(totalMonthly).toLocaleString()} 元</div>
+        <div class="result-item"><strong>總金額</strong><br>${Math.round(total).toLocaleString()} 元</div>
+        <div class="result-item"><strong>月付款</strong><br>${Math.round(monthlyPayment).toLocaleString()} 元</div>
+        <div class="result-item"><strong>利息</strong><br>${Math.round(interest).toLocaleString()} 元</div>`;
+    }
+
+    const data = {
+      "Model 3": {
+        variants: { "RWD": 1699900, "Long Range": 1999900, "Performance": 2337900 },
+        interiors: { "黑色": 0, "白色": 37500 },
+        steering: null
+      },
+      "Model Y": {
+        variants: { "RWD": 1899900, "Long Range": 2299900 },
+        interiors: { "黑色": 0, "白色": 37500 },
+        steering: null
+      },
+      "Model S": {
+        variants: { "全輪驅動": 2565900, "Plaid": 3000900 },
+        interiors: { "黑色": 0, "白色": 65000, "米白色": 65000 },
+        steering: { "一般方向盤": 0, "Yoke方向盤": 33000 }
+      },
+      "Model X": {
+        variants: { "全輪驅動": 2865900, "Plaid": 3165900 },
+        interiors: { "黑色": 0, "白色": 65000, "米白色": 65000 },
+        steering: { "一般方向盤": 0, "Yoke方向盤": 33000 }
+      }
+    };
+
+    function updateTeslaOptions() {
+      const model = document.getElementById("model").value;
+      const variant = document.getElementById("variant");
+      const interior = document.getElementById("interior");
+      const steering = document.getElementById("steering");
+      variant.innerHTML = interior.innerHTML = steering.innerHTML = "";
+      if (!model) return;
+      Object.entries(data[model].variants).forEach(([k, v]) => {
+        variant.innerHTML += `<option value='${v}'>${k}（$${v.toLocaleString()}）</option>`;
+      });
+      Object.entries(data[model].interiors).forEach(([k, v]) => {
+        interior.innerHTML += `<option value='${v}'>${k}（+$${v.toLocaleString()}）</option>`;
+      });
+      if (data[model].steering) {
+        steering.disabled = false;
+        Object.entries(data[model].steering).forEach(([k, v]) => {
+          steering.innerHTML += `<option value='${v}'>${k}（+$${v.toLocaleString()}）</option>`;
+        });
+      } else {
+        steering.disabled = true;
+        steering.innerHTML = `<option value='0'>（不可選）</option>`;
+      }
+    }
+
+    function calculateTeslaLoan() {
+      const base = parseInt(document.getElementById("variant").value || "0");
+      const interior = parseInt(document.getElementById("interior").value || "0");
+      const steering = parseInt(document.getElementById("steering").value || "0");
+      const totalPrice = base + interior + steering;
+
+      const percent = parseFloat(document.getElementById("loanPercentTesla").value) / 100;
+      const rate = parseFloat(document.getElementById("interestRateTesla").value) / 100;
+      const months = parseInt(document.getElementById("monthsTesla").value);
+      const loanAmount = totalPrice * percent;
+      const downPayment = totalPrice - loanAmount;
+      const monthlyRate = rate / 12;
+      const monthlyPayment = loanAmount * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
+      const totalMonthly = monthlyPayment * months;
+      const total = downPayment + totalMonthly;
+      const interest = total - totalPrice;
+
+      document.getElementById("resultTesla").innerHTML = `
+        <div class="result-item"><strong>車價</strong><br>${totalPrice.toLocaleString()} 元</div>
+        <div class="result-item"><strong>首付</strong><br>${Math.round(downPayment).toLocaleString()} 元</div>
+        <div class="result-item"><strong>貸款本金</strong><br>${Math.round(loanAmount).toLocaleString()} 元</div>
+        <div class="result-item"><strong>總月付款</strong><br>${Math.round(totalMonthly).toLocaleString()} 元</div>
+        <div class="result-item"><strong>總金額</strong><br>${Math.round(total).toLocaleString()} 元</div>
+        <div class="result-item"><strong>月付款</strong><br>${Math.round(monthlyPayment).toLocaleString()} 元</div>
+        <div class="result-item"><strong>利息</strong><br>${Math.round(interest).toLocaleString()} 元</div>`;
+    }
+  </script>
+</body>
+</html>
